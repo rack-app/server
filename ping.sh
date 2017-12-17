@@ -1,0 +1,1 @@
+curl localhost:9292 -v
