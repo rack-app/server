@@ -9,7 +9,7 @@ import (
 func createCMD(port int, out, err io.Writer) *exec.Cmd {
 	cmd := exec.Command(
 		"rackup",
-		"--server", "puma",
+		"--server", "rack-app-receiver",
 		"--port", strconv.Itoa(port),
 	)
 

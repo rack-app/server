@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"os/exec"
 	"sync"
@@ -22,15 +20,15 @@ type Worker interface {
 }
 
 type worker struct {
-	cmd   *exec.Cmd
-	wg    *sync.WaitGroup
-	proxy *httputil.ReverseProxy
+	addr string
+	cmd  *exec.Cmd
+	wg   *sync.WaitGroup
 }
 
 func New(port int, out, err io.Writer) Worker {
-	c := createCMD(port, out, err)
-	w := &sync.WaitGroup{}
-	u, _ := url.Parse(fmt.Sprintf("http://localhost:%v", port))
-	rp := httputil.NewSingleHostReverseProxy(u)
-	return &worker{wg: w, cmd: c, proxy: rp}
+	return &worker{
+		wg:   &sync.WaitGroup{},
+		addr: fmt.Sprintf(":%v", port),
+		cmd:  createCMD(port, out, err),
+	}
 }

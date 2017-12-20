@@ -18,12 +18,21 @@ type cluster struct {
 	size    int
 }
 
-func New(ws []Worker) Cluster {
+func New(ws []Worker, threadCount int) Cluster {
 	workers := make([]Worker, 0, len(ws))
 	workers = append(workers, ws...)
-	queue := make(chan Worker, len(ws))
-	for _, w := range workers {
-		queue <- w
-	}
+	queue := createQueue(workers, threadCount)
 	return &cluster{queue: queue, workers: workers}
+}
+
+func createQueue(workers []Worker, threadCount int) chan Worker {
+	queue := make(chan Worker, len(workers)*threadCount)
+
+	for i := 0; i < threadCount; i++ {
+		for _, w := range workers {
+			queue <- w
+		}
+	}
+
+	return queue
 }

@@ -1,11 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -30,11 +32,36 @@ func main() {
 func BuildCluster() clusters.Cluster {
 	ws := make([]clusters.Worker, 0, runtime.NumCPU())
 
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < WorkerClusterSize(); i++ {
 		ws = append(ws, workers.New(GetPort(), os.Stdout, os.Stderr))
 	}
 
-	return clusters.New(ws)
+	return clusters.New(ws, WorkerThreadCount())
+}
+
+func WorkerClusterSize() int {
+	return fetchCount("RACK_APP_WORKER_CLUSTER_COUNT", runtime.NumCPU())
+}
+
+func WorkerThreadCount() int {
+	return fetchCount("RACK_APP_WORKER_THREAD_COUNT", 16)
+}
+
+func fetchCount(envKey string, defaultValue int) int {
+	rawCount, isSet := os.LookupEnv(envKey)
+
+	if !isSet {
+		return defaultValue
+	}
+
+	count, err := strconv.Atoi(rawCount)
+
+	if err != nil {
+		fmt.Println(fmt.Sprintf("%s must be a valid number"))
+		os.Exit(1)
+	}
+
+	return count
 }
 
 func HandleSignals(sigs chan os.Signal, c clusters.Cluster, server *http.Server) {

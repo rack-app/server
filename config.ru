@@ -7,65 +7,77 @@ app = lambda do |_env|
   resp.finish
 end
 
+require 'csv'
 require 'socket'
 require 'timeout'
 require 'rack/content_length'
 require 'rack/rewindable_input'
 
 module Rack::App::Handler
-  ::Rack::Handler.register 'rack-app', 'Rack::App::Handler'
+  ::Rack::Handler.register 'rack-app-receiver', 'Rack::App::Handler'
 
-  extend(self)
+  require 'socket'
 
   class Server
-    def initialize(app, socket_path)
-      @socket_path = socket_path
-      @mutex = Mutex.new
+    def initialize(app, port)
+      @port = port.to_i
       @app = app
+      @wip = {}
     end
 
     def start
-      @server = UNIXServer.new(@socket_path)
-      loop { handle_request(@server.accept) }
+      @server = ::TCPServer.new(@port)
+      @wip.clear
+
+      loop do
+        thr = Thread.start(@server.accept) do |s|
+          handle(s)
+          @wip.delete(Thread.current.__id__)
+        end
+        @wip[thr.__id__] = nil
+      end
     rescue IOError, Errno::EBADF
-      File.delete(@socket_path) if File.exist?(@socket_path)
+      @server.close unless @server.closed?
     end
 
     def stop
-      Thread.new do
-        @mutex.synchronize do
-          @server.close
-        end
-      end
+      sleep(0.1) until @wip.empty?
+      @server && @server.close
     end
 
     private
 
-    def handle_request(socket)
-      @mutex.synchronize do
-        env = receive_env(socket)
-        resp = response_for(env)
-        handle_response(socket, resp)
-        socket.close
-      end
+    def handle(socket)
+      env = receive_env(socket)
+      resp = response_for(env)
+
+      send_headers(socket, resp[0], resp[1])
+      send_body(socket, resp[2])
+    ensure
+      socket.flush
+      socket.close
     end
 
-    def handle_response(socket, raw_rack_resp)
-      socket.puts(JSON.dump(resp_conf_by(raw_rack_resp)))
+    def send_headers(socket, code, headers)
+      csv = CSV.new(socket, :col_sep => "\t")
 
-      raw_rack_resp[2].each do |chunk|
-        socket.print(chunk)
+      csv << [code]
+      headers.each do |key, value|
+        csv << [key, value]
       end
 
+      socket.puts
+    ensure
       socket.flush
     end
 
-    def resp_conf_by(rack_resp)
-      {
-        'status' => rack_resp[0],
-        'headers' => rack_resp[1],
-        'length' => (rack_resp[1][::Rack::CONTENT_LENGTH] || -1).to_i
-      }
+    def send_body(socket, eachable)
+      eachable.each do |chunk|
+        c = socket.write(chunk)
+        puts("<- #{c}") if ENV["RACK_APP_DEBUG"]
+      end
+    ensure
+      socket.flush
     end
 
     def response_for(env)
@@ -75,34 +87,36 @@ module Rack::App::Handler
       [500, {}, []]
     end
 
-    require 'json'
     def receive_env(socket)
-      env_base = JSON.parse(socket.gets)
-      env_base.merge(::Rack::RACK_VERSION => Rack::VERSION,
-                     ::Rack::RACK_INPUT        => Rack::RewindableInput.new(socket),
-                     ::Rack::RACK_ERRORS       => $stderr,
-                     ::Rack::RACK_MULTITHREAD  => false,
-                     ::Rack::RACK_MULTIPROCESS => false,
-                     ::Rack::RACK_RUNONCE      => false,
-                     ::Rack::RACK_URL_SCHEME   => env_base['SCHEME'].downcase)
+      env = {}
+
+      loop do
+        line = socket.gets
+        break if line.strip == ''
+        row = CSV.parse(line, :col_sep => "\t", headers: %i[key value])
+        env[row[:key].first] = row[:value].first.to_s
+      end
+
+      env.merge!(::Rack::RACK_VERSION      => Rack::VERSION,
+                 ::Rack::RACK_INPUT        => Rack::RewindableInput.new(socket),
+                 ::Rack::RACK_ERRORS       => $stderr,
+                 ::Rack::RACK_MULTITHREAD  => true,
+                 ::Rack::RACK_MULTIPROCESS => true,
+                 ::Rack::RACK_RUNONCE      => false,
+                 ::Rack::RACK_URL_SCHEME   => env['SCHEME'].downcase)
     end
   end
 
+  module_function
+
   def run(app, options)
-    socket_path = options[:SP] || abort('Missing Socket file path')
-    server = self::Server.new(app, socket_path)
-    trap_signals_for(server)
+    server = self::Server.new(app, options[:Port] || '9292')
+    %w[INT TERM].each { |sig| ::Signal.trap(sig) { server.stop } }
     server.start
   end
 
   def valid_options
-    { 'SP=[SOCKET_FILE_PATH]' => 'socket file path where the socket should be created' }
-  end
-
-  private
-
-  def trap_signals_for(receiver)
-    %w[INT TERM].each { |sig| ::Signal.trap(sig) { receiver.stop } }
+    {}
   end
 end
 
