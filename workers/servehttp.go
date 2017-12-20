@@ -62,13 +62,6 @@ func forwardRequest(w io.Writer, req *http.Request) error {
 }
 
 func receiveResponse(r io.Reader, rw http.ResponseWriter) error {
-
-	// data, err := ioutil.ReadAll(reader)
-	// if err != nil {
-	// 	return err
-	// }
-	// r := bytes.NewReader(data)
-
 	bufioReader := bufio.NewReader(r)
 
 	rawStatus, err := fetchLine(bufioReader)
@@ -88,25 +81,6 @@ func receiveResponse(r io.Reader, rw http.ResponseWriter) error {
 	}
 
 	rw.WriteHeader(status)
-
-	// for {
-	// 	data, err := fetchLine(bufioReader)
-
-	// 	if err != nil {
-	// 		if err == io.EOF {
-	// 			break
-	// 		}
-	// 		return err
-	// 	}
-
-	// 	copied, err := rw.Write(data)
-
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	debug(fmt.Sprintf("-> %v", copied))
-	// }
 
 	copied, err := io.Copy(rw, bufioReader)
 	debug(fmt.Sprintf("-> %v", copied))

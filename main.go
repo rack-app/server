@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"syscall"
 	"time"
@@ -25,6 +26,7 @@ func main() {
 
 	OkOrPanic(c.Start)
 	go StartServer(server)
+	defer PPROF()()
 
 	HandleSignals(sigs, c, server)
 }
@@ -111,4 +113,22 @@ func GetPort() int {
 		panic(err)
 	}
 	return port
+}
+
+func PPROF() func() {
+	if _, do := os.LookupEnv("PPROF"); !do {
+		return func() {}
+	}
+
+	f, err := os.Create("./cpu.prof")
+
+	if err != nil {
+		panic(err)
+	}
+
+	pprof.StartCPUProfile(f)
+
+	return func() {
+		pprof.StopCPUProfile()
+	}
 }
