@@ -1,1 +1,1 @@
-wrk -t 8 -c 576 -d 30s --latency "http://localhost:9292"
+wrk -t 8 -c 512 -d 30s --latency "http://localhost:9292"
