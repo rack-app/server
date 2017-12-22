@@ -1,12 +1,7 @@
-# Target Goal
-```
-$ wrk -t12 -c400 -d30s http://localhost:9292
-Running 30s test @ http://localhost:9292
-  12 threads and 400 connections
-  Thread Stats   Avg      Stdev     Max   +/- Stdev
-    Latency     2.33ms    6.65ms 180.74ms   93.02%
-    Req/Sec    16.15k    11.46k   58.06k    53.57%
-  2871948 requests in 30.07s, 109.56MB read
-Requests/sec:  95517.29
-Transfer/sec:      3.64MB
-```
+# Project Turtle
+
+## HTTP CONNECT tunneling
+
+Suppose client wants to use either HTTPS or WebSockets in order to talk to server. Client is aware of using proxy. Simple HTTP request / response flow cannot be used since client needs to e.g. establish secure connection with server (HTTPS) or wants to use other protocol over TCP connection (WebSockets). Technique which works is to use HTTP CONNECT method. It tells the proxy server to establish TCP connection with destination server and when done to proxy the TCP stream to and from the client. This way proxy server won’t terminate SSL but will simply pass data between client and destination server so these two parties can establish secure connection.
+
+![](/readme/http_connect_tunneling.png)

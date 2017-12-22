@@ -54,9 +54,7 @@ func forwardRequest(w io.Writer, req *http.Request) error {
 		return err
 	}
 
-	if _, err := io.Copy(w, req.Body); err != nil {
-		return err
-	}
+	go io.Copy(w, req.Body)
 
 	return nil
 }

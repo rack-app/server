@@ -1,23 +1,28 @@
 package clusters
 
-import "os"
+import (
+	"fmt"
+	"os"
 
-func (wc *cluster) Start() []error {
-	return wc.each(func(w Worker) error { return w.Start() })
+	"github.com/rack-app/server/workers"
+)
+
+func (c *cluster) Start() []error {
+	return c.each(func(w workers.Worker) error { return w.Start() })
 }
 
-func (wc *cluster) Close() []error {
-	return wc.each(func(w Worker) error { return w.Close() })
+func (c *cluster) Close() []error {
+	return c.each(func(w workers.Worker) error { return w.Close() })
 }
 
-func (wc *cluster) Signal(s os.Signal) []error {
-	return wc.each(func(w Worker) error { return w.Signal(s) })
+func (c *cluster) Signal(s os.Signal) []error {
+	return c.each(func(w workers.Worker) error { return w.Signal(s) })
 }
 
-func (wc *cluster) each(fn func(Worker) error) []error {
+func (c *cluster) each(fn func(workers.Worker) error) []error {
 	errs := []error{}
 
-	for _, w := range wc.workers {
+	for _, w := range c.workers {
 		err := fn(w)
 
 		if err != nil {
@@ -26,4 +31,17 @@ func (wc *cluster) each(fn func(Worker) error) []error {
 	}
 
 	return errs
+}
+
+func (c *cluster) With(do func(workers.Worker) error) {
+	w := <-c.queue
+	defer func() { go func() { c.queue <- w }() }()
+
+	if err := do(w); err != nil {
+		fmt.Println(err)
+		// w.Close()
+		// w.Inc()
+		// return
+	}
+
 }

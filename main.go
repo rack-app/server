@@ -32,7 +32,7 @@ func main() {
 }
 
 func BuildCluster() clusters.Cluster {
-	ws := make([]clusters.Worker, 0, runtime.NumCPU())
+	ws := make([]workers.Worker, 0, runtime.NumCPU())
 
 	for i := 0; i < WorkerClusterSize(); i++ {
 		ws = append(ws, workers.New(GetPort(), os.Stdout, os.Stderr))

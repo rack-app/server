@@ -13,6 +13,7 @@ var OUT = os.Stdout
 var ERR = os.Stderr
 
 type Worker interface {
+	Addr() string
 	Start() error
 	Close() error
 	Signal(os.Signal) error
