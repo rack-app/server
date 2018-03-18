@@ -1,7 +1,13 @@
 
 require 'rack/app'
+require 'pg'
+require 'sequel'
+
+db = Sequel.connect("postgres://postgres@localhost:5432")
 
 app = lambda do |_env|
+  db["SELECT 1=1;"]
+
   resp = Rack::Response.new
   resp.write('OK')
   resp.finish

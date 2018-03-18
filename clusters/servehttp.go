@@ -1,9 +1,16 @@
 package clusters
 
-import "net/http"
+import (
+	"net/http"
 
-func (c *cluster) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	w := <-c.queue
-	defer func() { go func() { c.queue <- w }() }()
-	w.ServeHTTP(rw, req)
+	"github.com/rack-app/server/workers"
+)
+
+func (c *Cluster) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	c.With(func(w *workers.Worker) error {
+
+		w.ServeHTTP(rw, req)
+
+		return nil
+	})
 }

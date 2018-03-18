@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-func (w *worker) handleWorkerResponse(conn net.Conn, rw http.ResponseWriter) error {
+func (w *Worker) handleWorkerResponse(conn net.Conn, rw http.ResponseWriter) error {
 	r := bufio.NewReader(conn)
 	jsonEncodedConfig, err := r.ReadBytes('\n')
 
@@ -38,7 +38,7 @@ func (w *worker) handleWorkerResponse(conn net.Conn, rw http.ResponseWriter) err
 	return nil
 }
 
-func (w *worker) sendConfig(conn net.Conn, req *http.Request) error {
+func (w *Worker) sendConfig(conn net.Conn, req *http.Request) error {
 	serialized, jsonMarshalErr := json.Marshal(rackEnvBaseBy(req))
 
 	if jsonMarshalErr != nil {

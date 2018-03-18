@@ -1,5 +1,5 @@
 package workers
 
-func (w *worker) Addr() string {
+func (w *Worker) Addr() string {
 	return w.addr
 }

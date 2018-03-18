@@ -7,19 +7,19 @@ import (
 	"github.com/rack-app/server/workers"
 )
 
-func (c *cluster) Start() []error {
-	return c.each(func(w workers.Worker) error { return w.Start() })
+func (c *Cluster) Start() []error {
+	return c.each(func(w *workers.Worker) error { return w.Start() })
 }
 
-func (c *cluster) Close() []error {
-	return c.each(func(w workers.Worker) error { return w.Close() })
+func (c *Cluster) Close() []error {
+	return c.each(func(w *workers.Worker) error { return w.Close() })
 }
 
-func (c *cluster) Signal(s os.Signal) []error {
-	return c.each(func(w workers.Worker) error { return w.Signal(s) })
+func (c *Cluster) Signal(s os.Signal) []error {
+	return c.each(func(w *workers.Worker) error { return w.Signal(s) })
 }
 
-func (c *cluster) each(fn func(workers.Worker) error) []error {
+func (c *Cluster) each(fn func(*workers.Worker) error) []error {
 	errs := []error{}
 
 	for _, w := range c.workers {
@@ -33,7 +33,7 @@ func (c *cluster) each(fn func(workers.Worker) error) []error {
 	return errs
 }
 
-func (c *cluster) With(do func(workers.Worker) error) {
+func (c *Cluster) With(do func(*workers.Worker) error) {
 	w := <-c.queue
 	defer func() { go func() { c.queue <- w }() }()
 

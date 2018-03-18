@@ -1,18 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"net"
-	"net/http"
 	"os"
 	"os/signal"
-	"runtime"
 	"runtime/pprof"
-	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/rack-app/server/clusters"
+	"github.com/rack-app/server/debug"
 	"github.com/rack-app/server/workers"
 )
 
@@ -31,42 +27,22 @@ func main() {
 	HandleSignals(sigs, c, server)
 }
 
-func BuildCluster() clusters.Cluster {
-	ws := make([]workers.Worker, 0, runtime.NumCPU())
+func BuildCluster() *clusters.Cluster {
 
-	for i := 0; i < WorkerClusterSize(); i++ {
+	workerClusterSize := WorkerClusterSize()
+	workerThreadCount := WorkerThreadCount()
+	debug.Printf("W: %v; T: %v\n", workerClusterSize, workerThreadCount)
+
+	ws := make([]*workers.Worker, 0, workerClusterSize)
+
+	for i := 0; i < workerClusterSize; i++ {
 		ws = append(ws, workers.New(GetPort(), os.Stdout, os.Stderr))
 	}
 
-	return clusters.New(ws, WorkerThreadCount())
+	return clusters.New(ws, workerThreadCount)
 }
 
-func WorkerClusterSize() int {
-	return fetchCount("RACK_APP_WORKER_CLUSTER_COUNT", runtime.NumCPU())
-}
-
-func WorkerThreadCount() int {
-	return fetchCount("RACK_APP_WORKER_THREAD_COUNT", 16)
-}
-
-func fetchCount(envKey string, defaultValue int) int {
-	rawCount, isSet := os.LookupEnv(envKey)
-
-	if !isSet {
-		return defaultValue
-	}
-
-	count, err := strconv.Atoi(rawCount)
-
-	if err != nil {
-		fmt.Println(fmt.Sprintf("%s must be a valid number"))
-		os.Exit(1)
-	}
-
-	return count
-}
-
-func HandleSignals(sigs chan os.Signal, c clusters.Cluster, server *http.Server) {
+func HandleSignals(sigs chan os.Signal, c *clusters.Cluster, server Server) {
 receiveSignals:
 	for sig := range sigs {
 		errs := c.Signal(sig)
@@ -88,31 +64,6 @@ receiveSignals:
 
 		}
 	}
-}
-
-// GetFreePort asks the kernel for a free open port that is ready to use.
-func GetFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", ":0")
-	if err != nil {
-		return 0, err
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port, nil
-}
-
-// GetPort is deprecated, use GetFreePort instead
-// Ask the kernel for a free open port that is ready to use
-func GetPort() int {
-	port, err := GetFreePort()
-	if err != nil {
-		panic(err)
-	}
-	return port
 }
 
 func PPROF() func() {

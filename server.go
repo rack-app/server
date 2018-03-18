@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -12,7 +11,12 @@ func NewServer(handler http.Handler) *http.Server {
 	return &http.Server{Addr: ":" + port(), Handler: handler}
 }
 
-func StartServer(s *http.Server) {
+type Server interface {
+	ListenAndServe() error
+	Shutdown(context.Context) error
+}
+
+func StartServer(s Server) {
 	if err := s.ListenAndServe(); err != nil {
 		if err != http.ErrServerClosed {
 			panic(err)
@@ -20,24 +24,10 @@ func StartServer(s *http.Server) {
 	}
 }
 
-func ShutdownServer(s *http.Server, timeout time.Duration) {
+func ShutdownServer(s Server, timeout time.Duration) {
 	ctx, _ := context.WithTimeout(context.Background(), timeout)
 
 	if err := s.Shutdown(ctx); err != nil {
 		fmt.Println(err.Error())
 	}
-}
-
-func port() string {
-	var port string
-
-	PortEnvValue, isExist := os.LookupEnv("PORT")
-
-	if !isExist {
-		port = "9292"
-	} else {
-		port = PortEnvValue
-	}
-
-	return port
 }

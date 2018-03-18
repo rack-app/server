@@ -13,16 +13,11 @@ import (
 	"strings"
 )
 
-func (w *worker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if err := w.ServeHTTPWithError(rw, req); err != nil {
-		debug(err)
-
-		http.Error(rw, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		// w.Restart()
-	}
+func (w *Worker) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
+	w.rp.ServeHTTP(rw, req)
 }
 
-func (w *worker) ServeHTTPWithError(rw http.ResponseWriter, req *http.Request) error {
+func (w *Worker) ServeHTTPWithError(rw http.ResponseWriter, req *http.Request) error {
 
 	conn, err := net.Dial("tcp", w.addr)
 

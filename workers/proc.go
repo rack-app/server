@@ -2,11 +2,11 @@ package workers
 
 import "os"
 
-func (w *worker) Start() error {
+func (w *Worker) Start() error {
 	return w.cmd.Start()
 }
 
-func (w *worker) Close() error {
+func (w *Worker) Close() error {
 	if w.Exited() {
 		return nil
 	}
@@ -18,10 +18,10 @@ func (w *worker) Close() error {
 	return w.cmd.Wait()
 }
 
-func (w *worker) Exited() bool {
+func (w *Worker) Exited() bool {
 	return w.cmd.ProcessState != nil && w.cmd.ProcessState.Exited()
 }
 
-func (w *worker) Signal(s os.Signal) error {
+func (w *Worker) Signal(s os.Signal) error {
 	return w.cmd.Process.Signal(s)
 }
